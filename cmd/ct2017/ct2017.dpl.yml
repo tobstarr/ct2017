@@ -1,0 +1,32 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    run: ct2017
+  name: ct2017
+  namespace: default
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      run: ct2017
+  template:
+    metadata:
+      labels:
+        run: ct2017
+    spec:
+      containers:
+      - image: tobstarr/ct2017:603a3eee5583
+        name: ct2017
+        imagePullPolicy: IfNotPresent
+        readinessProbe:
+          httpGet:
+            path: /_status
+            port: 3000
+          periodSeconds: 5
+          successThreshold: 3
+          timeoutSeconds: 1
+        livenessProbe:
+          httpGet:
+            path: /_status
+            port: 3000

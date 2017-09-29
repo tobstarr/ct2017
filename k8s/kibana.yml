@@ -1,0 +1,130 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kibana
+
+---
+
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    run: elasticsearch
+  name: elasticsearch
+  namespace: kibana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      run: elasticsearch
+  template:
+    metadata:
+      labels:
+        run: elasticsearch
+    spec:
+      containers:
+      - image: elasticsearch:5.5.2
+        name: elasticsearch
+        volumeMounts:
+        - mountPath: /usr/share/elasticsearch/data
+          name: data
+      volumes:
+      - hostPath:
+          path: /data/k8s/elasticsearch
+        name: data
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    run: elasticsearch
+  name: elasticsearch
+  namespace: kibana
+spec:
+  type: NodePort
+  ports:
+  - port: 9200
+    protocol: TCP
+    targetPort: 9200
+  selector:
+    run: elasticsearch
+---
+
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  labels:
+    run: kibana
+  name: kibana
+  namespace: kibana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      run: kibana
+  template:
+    metadata:
+      labels:
+        run: kibana
+    spec:
+      containers:
+      - env:
+        - name: ELASTICSEARCH_URL
+          value: http://elasticsearch:9200
+        image: kibana:5.5.2
+        name: kibana
+      - name: auth
+        env:
+          - name: BASIC_AUTH_USER
+            value: "phraseapp"
+          - name: "BASIC_AUTH_PASSWORD"
+            value: "foobarbaz"
+          - name: "REMOTE_URL"
+            value: "http://localhost:5601"
+          - name: "PORT"
+            value: "0.0.0.0:80"
+        image: tobstarr/basic-auth-proxy:v2
+        ports:
+          - protocol: TCP
+            containerPort: 80
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    run: kibana
+  name: kibana
+  namespace: kibana
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 80
+  selector:
+    run: kibana
+
+---
+
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    kubernetes.io/tls-acme: "true"
+  name: kibana.ct2017.phraseapp.io
+  namespace: kibana
+spec:
+  rules:
+  - host: kibana.ct2017.phraseapp.io
+    http:
+      paths:
+      - backend:
+          serviceName: kibana
+          servicePort: 80
+        path: /
+  tls:
+  - hosts:
+    - kibana.ct2017.phraseapp.io
+    secretName: kibana.ct2017.phraseapp.io
