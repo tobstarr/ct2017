@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-var logger = log.New(os.Stderr, "[ts-reload] ", log.Ldate|log.Ltime)
+var logger = log.New(os.Stderr, "[go-reload] ", log.Ldate|log.Ltime)
 
 func main() {
 	e := run()
@@ -19,7 +19,8 @@ func main() {
 
 func run() error {
 	if len(os.Args) < 2 {
-		return fmt.Errorf("at least 2 parameters required")
+		fmt.Printf("Usage: %s <program> [options]\n", os.Args[0])
+		os.Exit(-1)
 	}
 	path, e := exec.LookPath(os.Args[1])
 	if e != nil {
@@ -49,7 +50,7 @@ func run() error {
 			if e != nil {
 				logger.Printf("ERROR: %s", e)
 			} else if stat.ModTime() != modified {
-				logger.Printf("mod time changed => sleeping")
+				logger.Printf("mod time changed => reloading")
 				break
 			}
 			time.Sleep(1 * time.Second)
@@ -60,5 +61,4 @@ func run() error {
 			return e
 		}
 	}
-	return nil
 }
